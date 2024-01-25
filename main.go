@@ -2,17 +2,21 @@ package main
 
 import (
 	"context"
-	"flag"
+	"errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/urfave/cli/v2"
+	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/helmwave/logrus-emoji-formatter"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/collector"
-	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version"
 	res "google.golang.org/api/cloudresourcemanager/v1"
 )
+
+const RootEnvVar = "GCP_SA_EXPORTER"
 
 var (
 	flagAddr            string
@@ -24,78 +28,140 @@ var (
 	flagRefreshInterval time.Duration
 )
 
-func init() {
-	flag.StringVar(&flagAddr, "address", ":8080", "Listen address")
-	flag.StringVar(&flagLogFormat, "log-format", "emoji", "emoji | pad | json | text ")
-	flag.StringVar(&flagLogLevel, "log-level", "debug", "debug | info | warn | trace ")
-	flag.StringVar(&flagProjectID, "project-id", "", "GCP project ID")
-	flag.StringVar(&flagParentID, "parent-id", "", "Fetching projects by parent ID")
-	flag.IntVar(&flagDeltaDays, "days", 90, "Expired after N days")
-	flag.DurationVar(&flagRefreshInterval, "refresh-interval", 30*time.Second, "refresh interval")
+var ctl = &cli.App{
+	Name:        "gcp-serviceaccounts-exporter",
+	Description: "GCP service accounts exporter",
+	Version:     version.Version,
+	Before: func(c *cli.Context) error {
+		switch flagLogFormat {
+		case "json":
+			log.SetFormatter(&log.JSONFormatter{
+				PrettyPrint: true,
+			})
+		case "pad":
+			log.SetFormatter(&log.TextFormatter{
+				PadLevelText: true,
+				ForceColors:  false,
+			})
+		case "emoji":
+			log.SetFormatter(&formatter.Config{
+				Color: true,
+			})
+		case "text":
+			log.SetFormatter(&log.TextFormatter{
+				ForceColors: false,
+			})
+		}
 
-	flag.Parse()
+		lvl, err := log.ParseLevel(flagLogLevel)
+		if err != nil {
+			log.Error(err, "set debug log format")
+			log.SetLevel(log.DebugLevel)
+		} else {
+			log.SetLevel(lvl)
+		}
 
-	switch flagLogFormat {
-	case "json":
-		log.SetFormatter(&log.JSONFormatter{
-			PrettyPrint: true,
-		})
-	case "pad":
-		log.SetFormatter(&log.TextFormatter{
-			PadLevelText: true,
-			ForceColors:  false,
-		})
-	case "emoji":
-		log.SetFormatter(&formatter.Config{
-			Color: true,
-		})
-	case "text":
-		log.SetFormatter(&log.TextFormatter{
-			ForceColors: false,
-		})
-	}
+		return nil
+	},
+	Commands: []*cli.Command{
+		{
+			Name:    "run",
+			Aliases: []string{"start"},
+			Usage:   "run exporter",
+			Before: func(c *cli.Context) error {
+				// Check flags
+				if flagProjectID == "" && flagParentID == "" {
+					return errors.New("you must specify project-id or parent-id")
+				} else if flagProjectID != "" && flagParentID != "" {
+					return errors.New("you must chose only project-id or parent-id")
+				}
 
-	lvl, err := log.ParseLevel(flagLogLevel)
-	if err != nil {
-		log.Error(err)
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(lvl)
-	}
+				return nil
 
-	if flagProjectID == "" && flagParentID == "" {
-		log.Fatal("You must specify project-id or parent-id")
-	} else if flagProjectID != "" && flagParentID != "" {
-		log.Fatal("You must chose only project-id or parent-id")
-	}
-
+			},
+			Action: func(c *cli.Context) error {
+				return run()
+			},
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:        "address",
+					Value:       ":8080",
+					Usage:       "Listen address",
+					EnvVars:     []string{RootEnvVar + "_ADDR"},
+					Destination: &flagAddr,
+				},
+				&cli.StringFlag{
+					Name:        "project-id",
+					Value:       "",
+					Usage:       "GCP project ID",
+					EnvVars:     []string{RootEnvVar + "_PROJECT_ID"},
+					Destination: &flagProjectID,
+				},
+				&cli.StringFlag{
+					Name:        "parent-id",
+					Value:       "",
+					Usage:       "Fetching projects by parent ID",
+					EnvVars:     []string{RootEnvVar + "_PARENT_ID"},
+					Destination: &flagParentID,
+				},
+				&cli.IntFlag{
+					Name:        "days",
+					Value:       90,
+					Usage:       "Expired after N days",
+					EnvVars:     []string{RootEnvVar + "_DELTA_DAYS"},
+					Destination: &flagDeltaDays,
+				},
+				&cli.DurationFlag{
+					Name:        "refresh-interval",
+					Value:       30 * time.Second,
+					Usage:       "Refresh interval",
+					EnvVars:     []string{RootEnvVar + "_DELTA_DAYS"},
+					Destination: &flagRefreshInterval,
+				},
+			},
+		},
+	},
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:        "log-level",
+			Value:       "debug",
+			Usage:       "debug | info | warn | trace",
+			EnvVars:     []string{RootEnvVar + "_LOG_LVL"},
+			Destination: &flagLogLevel,
+		},
+		&cli.StringFlag{
+			Name:        "log-format",
+			Value:       "emoji",
+			Usage:       "emoji | pad | json | text",
+			EnvVars:     []string{RootEnvVar + "_LOG_FORMAT"},
+			Destination: &flagLogFormat,
+		},
+	},
 }
 
 func main() {
-	log.WithFields(log.Fields{
-		"version":          version.Version,
-		"delta-days":       flagDeltaDays,
-		"log-level":        flagLogLevel,
-		"log-format":       flagLogFormat,
-		"parent-id":        flagParentID,
-		"project-id":       flagProjectID,
-		"refresh-interval": flagRefreshInterval,
-	}).Infof("App is starting now")
-	projects, err := GetProjects(flagProjectID, flagParentID)
+	err := ctl.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func run() error {
+	projects, err := GetProjects(flagProjectID, flagParentID)
+	if err != nil {
+		return err
+	}
+
 	log.Debugf("Found projects: %d", len(projects))
 
 	// Create Collector
 	c := collector.New(flagRefreshInterval, flagDeltaDays, projects)
 	go c.Run()
-	// TODO: implement pretty cancellation for Collector
 
 	// Expose /metrics HTTP endpoint using the created custom registry.
 	http.Handle("/metrics", promhttp.Handler())
 	log.Infof("Server is listening on %s", flagAddr)
-	log.Fatalln(http.ListenAndServe(flagAddr, nil))
+	return http.ListenAndServe(flagAddr, nil)
 }
 
 // GetProjects is shortcut around []*res.Project
