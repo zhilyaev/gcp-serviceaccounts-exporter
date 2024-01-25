@@ -1,0 +1,119 @@
+before:
+  hooks:
+    - go mod tidy
+
+###
+# Builds
+###
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v1
+    goos:
+      - linux
+      - windows
+      - darwin
+    main: ./cmd/helmwave
+    ldflags:
+      - -s -w -X github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version.Version={{ .Version }}
+
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+dockers:
+  - dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - ghcr.io/zhilyaev/gcp-serviceaccounts-exporter:{{ .Version }}-scratch
+      - ghcr.io/zhilyaev/gcp-serviceaccounts-exporter:scratch
+    build_flag_templates:
+      - "--target=scratch-goreleaser"
+      - "--pull"
+      - "--label=org.opencontainers.image.description=tool for monitoring expired gcp service accounts"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/zhilyaev/gcp-serviceaccounts-exporter"
+      - "--label=org.opencontainers.image.url=https://github.com/zhilyaev/gcp-serviceaccounts-exporter/pkgs/container/helmwave"
+    
+  - dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - ghcr.io/zhilyaev/gcp-serviceaccounts-exporter:{{ .Version }}
+      - ghcr.io/zhilyaev/gcp-serviceaccounts-exporter:latest
+    build_flag_templates:
+      - "--target=goreleaser"
+      - "--pull"
+      - "--label=org.opencontainers.image.description=Helmwave is tool for deploy your Helm Charts via GitOps"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+      - "--label=org.opencontainers.image.source=https://github.com/zhilyaev/gcp-serviceaccounts-exporter"
+      - "--label=org.opencontainers.image.url=https://github.com/zhilyaev/gcp-serviceaccounts-exporter/pkgs/container/helmwave"
+      - "--label=org.opencontainers.image.documentation=https://helmwave.github.io/docs/"
+
+
+
+
+###
+# Publishes
+###
+
+changelog:
+  skip: false
+  use: github
+  sort: asc
+
+  groups:
+    - title: "Tests"
+      regexp: "^.*\\(tests?\\):.*$"
+      order: 0
+    - title: "Dependencies"
+      regexp: "^.*\\(deps\\):.*$"
+      order: 1
+    - title: "CI"
+      regexp: "^.*\\(ci\\):.*$"
+      order: 2
+    - title: "New Features"
+      regexp: "^feat(\\(.*\\))?:.*$"
+      order: 3
+    - title: "Bug Fixes"
+      regexp: "^fix(\\(.*\\))?:.*$"
+      order: 3
+    - title: "Linter"
+      regexp: "^.*linter.*$"
+      order: 4
+    - title: "Other"
+      order: 999
+
+  filters:
+    exclude:
+      - "^WIP:"
+      - Merge pull request
+      - Merge branch
+      - go mod tidy
+      - typo
+      - "^chore"
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+release:
+  name_template: "v{{ .Version }}"
+  #  draft: true
+  prerelease: auto

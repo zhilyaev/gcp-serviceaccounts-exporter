@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/collector"
+	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version"
 	res "google.golang.org/api/cloudresourcemanager/v1"
 )
 
@@ -71,11 +72,20 @@ func init() {
 }
 
 func main() {
+	log.WithFields(log.Fields{
+		"version":          version.Version,
+		"delta-days":       flagDeltaDays,
+		"log-level":        flagLogLevel,
+		"log-format":       flagLogFormat,
+		"parent-id":        flagParentID,
+		"project-id":       flagProjectID,
+		"refresh-interval": flagRefreshInterval,
+	}).Infof("App is starting now")
 	projects, err := GetProjects(flagProjectID, flagParentID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Debugf("Projects: %d", len(projects))
+	log.Debugf("Found projects: %d", len(projects))
 
 	// Create Collector
 	c := collector.New(flagRefreshInterval, flagDeltaDays, projects)
