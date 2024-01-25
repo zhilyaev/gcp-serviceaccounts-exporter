@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/urfave/cli/v2"
-	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/helmwave/logrus-emoji-formatter"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/collector"
+	"github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version"
 	res "google.golang.org/api/cloudresourcemanager/v1"
 )
 
