@@ -18,7 +18,7 @@ builds:
       - linux
       - windows
       - darwin
-    main: ./cmd/helmwave
+    main: main.go
     ldflags:
       - -s -w -X github.com/zhilyaev/gcp-serviceaccounts-exporter/pkg/version.Version={{ .Version }}
 
