@@ -33,6 +33,7 @@ FROM scratch as scratch-release
 COPY --from=base-release /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /gcp-serviceaccounts-exporter /bin/
 ENTRYPOINT ["/bin/gcp-serviceaccounts-exporter"]
+CMD ["run"]
 USER 65534
 
 ### Scratch with goreleaser
@@ -40,4 +41,5 @@ FROM scratch as scratch-goreleaser
 COPY --from=base-release /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY gcp-serviceaccounts-exporter /bin/
 ENTRYPOINT ["/bin/gcp-serviceaccounts-exporter"]
+CMD ["run"]
 USER 65534

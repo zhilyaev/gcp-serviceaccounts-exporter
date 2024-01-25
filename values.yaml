@@ -1,0 +1,66 @@
+# This values for https://github.com/zhilyaev/uni-chart
+
+envs:
+  GCP_SA_EXPORTER_PARENT_ID: "826672558672"
+
+image:
+  pullPolicy: IfNotPresent
+  registry: ghcr.io
+  repository: zhilyaev/gcp-serviceaccounts-exporter
+  tag: 0.2.3
+
+
+
+
+ingressesGeneral:
+  ingressClassName: nginx
+  serviceName: &port 8080
+  servicePort: *port
+
+
+servicesGeneral:
+  ports:
+    - name: &portName http
+
+services:
+  *port: {}
+
+deploymentsGeneral:
+  livenessProbe:
+    httpGet:
+      path: /metrics
+      port: *port
+    initialDelaySeconds: 60
+    periodSeconds: 3
+    timeoutSeconds: 3
+  ports:
+    - name: *portName
+      containerPort: *port
+  envConfigmaps:
+    - envs
+
+
+deployments:
+  app:
+    replicas: 1
+    envConfigmaps:
+      - envs
+    containers:
+      - name: app
+        args: ["run"]
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 10m
+          limits:
+            memory: 200Mi
+            cpu: 550m
+
+
+serviceMonitors:
+  app:
+    endpoints:
+      - interval: 30s
+        path: /metrics
+        port: *portName
+

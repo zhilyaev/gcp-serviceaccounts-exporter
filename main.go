@@ -147,6 +147,16 @@ func main() {
 }
 
 func run() error {
+	log.WithFields(log.Fields{
+		"version":          version.Version,
+		"delta-days":       flagDeltaDays,
+		"log-level":        flagLogLevel,
+		"log-format":       flagLogFormat,
+		"parent-id":        flagParentID,
+		"project-id":       flagProjectID,
+		"refresh-interval": flagRefreshInterval,
+	}).Infof("App is running now")
+
 	projects, err := GetProjects(flagProjectID, flagParentID)
 	if err != nil {
 		return err
@@ -173,6 +183,10 @@ func GetProjects(projectID, parentID string) (projects []*res.Project, err error
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(projects) == 0 {
+		return nil, errors.New("no projects found")
 	}
 
 	return projects, err
