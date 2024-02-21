@@ -1,15 +1,13 @@
 # This values for https://github.com/zhilyaev/uni-chart
 
 envs:
-  GCP_SA_EXPORTER_PARENT_ID: "826672558672"
+  GCP_SA_EXPORTER_PARENT_ID: "<if you need scrape folder>"
 
 image:
   pullPolicy: IfNotPresent
   registry: ghcr.io
   repository: zhilyaev/gcp-serviceaccounts-exporter
-  tag: 0.2.3
-
-
+  tag: 0.2.4
 
 
 ingressesGeneral:
@@ -55,6 +53,12 @@ deployments:
           limits:
             memory: 200Mi
             cpu: 550m
+
+serviceAccountName: gcp-sa-exporter
+
+serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: gcp-sa-exporter@<your-project>.iam.gserviceaccount.com
 
 
 serviceMonitors:
