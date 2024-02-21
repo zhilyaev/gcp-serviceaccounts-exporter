@@ -1,4 +1,5 @@
 # This values for https://github.com/zhilyaev/uni-chart
+# $ helm upgrade -i gcp-sa-exporter -n gcp-sa-exporter oci://ghcr.io/zhilyaev/uni -f values.yaml
 
 envs:
   GCP_SA_EXPORTER_PARENT_ID: "<if you need scrape folder>"
