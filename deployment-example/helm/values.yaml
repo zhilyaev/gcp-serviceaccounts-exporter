@@ -69,3 +69,15 @@ serviceMonitors:
         path: /metrics
         port: *portName
 
+alerts:
+  gcp-sa-exporter:
+    groups:
+      - name: GCPExpiredServiceAccounts
+        rules:
+          - alert: GCPExpiredServiceAccounts120Days
+            annotations:
+              summary: Expired key {{ $labels.key }}
+            expr: gcp_service_accounts_expired_keys > 120
+            for: 1s
+            labels:
+              severity: warning
