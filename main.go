@@ -115,7 +115,7 @@ var ctl = &cli.App{
 					Name:        "refresh-interval",
 					Value:       30 * time.Second,
 					Usage:       "Refresh interval",
-					EnvVars:     []string{RootEnvVar + "_DELTA_DAYS"},
+					EnvVars:     []string{RootEnvVar + "_REFRESH_INTERVAL"},
 					Destination: &flagRefreshInterval,
 				},
 			},
