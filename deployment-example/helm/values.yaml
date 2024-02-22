@@ -8,7 +8,7 @@ image:
   pullPolicy: IfNotPresent
   registry: ghcr.io
   repository: zhilyaev/gcp-serviceaccounts-exporter
-  tag: 0.2.4
+  tag: 0.2.5
 
 
 ingressesGeneral:
